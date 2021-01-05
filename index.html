@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO chat</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://use.fontawesome.com/16db6b073b.js"></script>
+    <style>
+        body {
+            font: 13px Helvetica, Arial;
+            background-color: #202225;
+            padding-top: 15px;
+            color: white;
+            overflow: hidden;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 15px;
+            background-color: #36393F;
+        }
+
+        #messages li {
+            padding: 5px 10px;
+            font-size: 1.5em;
+        }
+
+        #users {
+            padding: 15px 15px 15px 45px;
+            background-color: #2F3136;
+        }
+
+        .event-message-non-italic, .event-message-italic {
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+        }
+
+        .event-message-italic {
+            font-style: italic;
+        }
+
+        .timestamp, .event-message-non-italic, .event-message-italic {
+            color: #aaaaaa;
+        }
+
+        .datestamp {
+            font-size: 2em !important;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+            background-color: #595c5f;
+            color: white;
+        }
+
+        #headers-row {
+            font-size: 2em;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        form.row button {
+            background-color: #484B51;
+            border-color: #484B51;
+        }
+
+        .pl-7p5 {
+            padding-left: 7.5px;
+        }
+
+        .pr-7p5 {
+            padding-right: 7.5px;
+        }
+
+        #messages, #users {
+            height: calc(100vh - 135px);
+            overflow: auto;
+            flex-direction: column;
+            display: flex;
+            word-wrap: break-word;
+        }
+
+        .btn:focus,.btn:active {
+            outline: none !important;
+            box-shadow: none;
+        }
+
+        li:nth-child(1) {
+            margin-top: auto;
+        }
+
+        #users li {
+            font-size: 2em;
+            list-style-type: square;
+        }
+
+        .user-bold {
+            font-weight: bold;
+        }
+
+        input {
+            background-color: #484B51 !important;
+            color: white !important;
+            caret-color: white !important;
+            border-color: #484B51 !important;
+        }
+
+        i.fa {
+            color: #7E8084;
+        }
+
+        @media only screen and (max-width: 517px) {
+            #messages, #users {
+                height: calc(100vh - 165px);
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row" id="headers-row">
+            <div class="col-8 col-md-9 pr-7p5">
+                You are <span id="user-span"></span>
+            </div>
+            <div class="col-4 col-md-3 pl-7p5">
+                Online Users
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-8 col-md-9 pr-7p5">
+                <ul id="messages"></ul>
+            </div>
+            <div class="col-4 col-md-3 pl-7p5">
+                <ul id="users"></ul>
+            </div>
+        </div>
+        <form class="row">
+            <div class="col-12">
+                <div class="input-group mb-3">
+                    <input type="text" id="msg" class="form-control" autocomplete="off">
+                    <div class="input-group-append">
+                        <button class="btn btn-light btn-lg" type="submit" title="Send">
+                            <i class="fa fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha256-pasqAKBDmFT4eHoN2ndd6lN370kFiGUFyTiUHWhU7k8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script>
+        $(function() {
+            var socket = io.connect();
+            var $messages = $("#messages");
+            var $messageInput = $("#msg");
+            var $users = $("#users");
+            var $userSpan = $("#user-span");
+
+            socket.on("enter chat", function() {
+                let cookie = document.cookie;
+                let userCookie = null;
+
+                if (cookie && cookie.startsWith("_user=")) {
+                    userCookie = cookie.split("=")[1];
+                }
+                socket.emit("add user", userCookie);
+            });
+
+            var user;
+            socket.on("new user", function(data) {
+                user = data.user;
+                $userSpan.text(user);
+
+                if (data.renderChatHistory) {
+                    for (let msg of data.chatHistory) {
+                        appendMessage(msg);
+                    }
+                    $messages.append('<li class="event-message-non-italic"> You are ' + user + '.</li>');
+                    $messages.scrollTop($messages[0].scrollHeight);
+                }
+
+                let cookieUser = "_user=" + user;
+
+                let cookieExpires = new Date();
+                cookieExpires.setTime(cookieExpires.getTime() + (15*60*1000));
+
+                let cookieStr = cookieUser + ";expires=" + cookieExpires.toUTCString() + ";path=/";
+                document.cookie = cookieStr;
+            });
+
+            $('form').submit(function(e) {
+                e.preventDefault(); // prevents page reloading
+
+                if ($messageInput.val()) {
+                    socket.emit('send message', $messageInput.val());
+                    $messageInput.val('');
+                }
+
+                return false;
+            });
+
+            socket.on('new message', function(data) {
+                appendMessage(data);
+                $messages.scrollTop($messages[0].scrollHeight);
+            });
+
+            function appendMessage(data) {
+                let datestamps = $messages.children("li.datestamp");
+                if (datestamps && datestamps.last().text() !== data.datestamp) {
+                    $messages.append('<li class="datestamp">' + data.datestamp + '</li>');
+                }
+
+                if (data.commandMsg) {
+                    $messages.append('<li class="event-message-italic">' + data.msg + '</li>');
+                }
+                else {
+                    $messages.append('<li><span class="timestamp">[' + data.timestamp + ']</span> <span style="color: ' + data.usernameColor + '">' + data.user + '</span>: '
+                        + data.msg + '</li>');
+                    if (data.user === user) {
+                        $messages.children().last().addClass("user-bold");
+                    }
+                }
+            }
+
+            socket.on('get users', function(data) {
+                let html = '';
+                for (i = 0; i < data.length; i++) {
+                    html += '<li>' + data[i] + '</li>';
+                }
+                $users.html(html);
+            });
+        });
+    </script>
+</body>
+</html>

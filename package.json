@@ -1,0 +1,24 @@
+{
+  "name": "seng513_asmt3",
+  "version": "1.0.0",
+  "description": "SENG 513 Assignment 3",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lawrencemanzano/chat-app.git"
+  },
+  "author": "Lawrence Manzano",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lawrencemanzano/chat-app/issues"
+  },
+  "homepage": "https://github.com/lawrencemanzano/chat-app#readme"
+}
