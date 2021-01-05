@@ -1,4 +1,5 @@
 # chat-app
+This was originally for a university CPSC course assignment.
 
 Instructions:
 - Download as ZIP from Github repository
